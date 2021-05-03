@@ -1,5 +1,5 @@
 # SparseMatrixOperation
-Personal project on the operations of sparse matrices in embedded system using C++
+Personal project on the operations of sparse matrices in an embedded system using C++
 
 Given the limited memory of an embedded system, how best to represent a sparse matrix, and operate them(addition, transpose, and multiplication with another sparse matrix)?
 The key is to represent the matrix as following:
