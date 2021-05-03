@@ -5,9 +5,14 @@ Given the limited memory of an embedded system, how best to represent a sparse m
 The key is to represent the matrix as following:
 
 e.g.) [0 1 0 2 3]
+
       [1 4 0 0 0]
+      
       [0 0 0 0 0]
+      
       [0 0 0 0 0]
+      
+      
 Given the sparse matrix above,
 column_index = [1, 3, 4, 0, 1]
 values = [1, 2, 3, 1, 4]
