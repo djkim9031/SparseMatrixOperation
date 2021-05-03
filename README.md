@@ -4,7 +4,9 @@ Operations of sparse matrices in embedded system.
 Given the limited memory of an embedded system, how best to represent a sparse matrix, and operate them(addition, transpose, and multiplication with another sparse matrix)?
 The key is to represent the matrix as following:
 
-e.g.) [0 1 0 2 3]
+e.g.) 
+
+      [0 1 0 2 3]
 
       [1 4 0 0 0]
       
