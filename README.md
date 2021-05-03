@@ -21,7 +21,7 @@ values = [1, 2, 3, 1, 4]
 row_index = [(0,0), (3,1), 5]
 
 That is, column_index and values arrays(or vectors) record all the corresponding elements.
-However, the row_index records only a row's first (representative) element's index in the column_index/values array and its row.
+However, the row_index records only a row's first (representative) element's index in the column_index/values array and its row and the total number of elements at the end.
 By doing this, we don't need to record every element's row, column, and value metrics. This further saves memory.
 
 However, as a tradeoff, the time complexity for multiplication operation could be at worst ~O(n^5)
