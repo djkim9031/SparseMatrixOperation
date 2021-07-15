@@ -1,575 +1,350 @@
 //
 //  main.cpp
-//  SparseMatrix
+//  SparseMatrixOP
 //
-//  Created by Dongjin Kim on 4/29/21.
+//  Created by Dongjin Kim on 7/14/21.
 //  Copyright © 2021 Dongjin Kim. All rights reserved.
 //
-/*
- [1 0 0 0 0]
- [8 3 0 0 0]
- [0 0 0 0 0]
- [0 4 9 0 0]
- [6 0 7 8 0]
- */
+
 #include <iostream>
-#include <string>
+#include <iomanip>
 #include <vector>
+#include <algorithm>
+
 using namespace std;
 
-class Node{
-public:
-    string data;
-    Node* next;
-};
-
-void insertLast(Node* n, string d){
-    if(n->next==NULL){
-        Node* temp = new Node();
-        temp->data = d;
-        temp->next = NULL;
-        n->next = temp;
-        temp=NULL;
-        delete temp;
-        return;
-    }
-    insertLast(n->next,d);
-}
-void deleteLast(Node* n){
-    if(n->next->next==NULL){
-        n->next = NULL;
-        return;
-    }
-    return deleteLast(n->next);
-}
-
-
-int* rowStringParser(string str){
-    int* rowInfo = new int[2];
-    string x,y;
-    bool preParse = true;
-    
-    for(int i=0;i<str.length();i++){
-        if(preParse){
-            if(str[i]==','){
-                preParse=false;
-            }else{
-                x+=str[i];}
-        }else{
-            y+=str[i];
-        }
-    }
-    
-    rowInfo[0] = stoi(x);
-    if(y.length()>0){
-    rowInfo[1] = stoi(y);
-    }
-    return rowInfo;
-}
-
 class SM{
+
     vector<double> val;
     vector<int> column_index;
-    Node* row_index = new Node();
-    int size;
-    int row,col;
+    vector<vector<int>> row_index;
+    //=vector<vector<int>>(num_of_unique_rows, vector<int>(2,vals))
+    //where vals = col_index of the row's first elem, row_num
+    int row, col, size;
+    //biggest row val, col val, and size = total # of non-zero elements
+    
     
 public:
-    //constructor:
-    SM(int r, int c){
-        row = r;
-        col = c;
-        row_index = NULL;
-        size=0;
+    SM(){
+        this->row = 0;
+        this->col = 0;
+        this->size = 0;
     }
     
-    //insert each row
-    void insert(double *r, int row_num){
-        bool firstElem = 1;
-        bool anyInserted = false;
-        int firstVal;
-        
-        for(int i=0;i<col;i++){
-            if((int)r[i]!=0){
-                
-                val.push_back(r[i]);
-                column_index.push_back(i);
-                if(firstElem){
-                    firstVal = size;
-
-                    firstElem=0;
-                }
-                size++;
-                anyInserted = true;
-            }
-        }
-        if(row_index==NULL and anyInserted){//First insert
-            Node* elem = new Node();
-            Node* _size = new Node();
-            elem->data = to_string(firstVal)+','+to_string(row_num);
-            _size->data = to_string(size);
-            elem->next = _size;
-            _size->next = NULL;
-            
-            row_index = elem;
-            
-            elem = NULL;
-            _size = NULL;
-            delete elem;
-            delete _size;
-            
-        }else{
-            if(anyInserted){
-                deleteLast(row_index);
-                insertLast(row_index, to_string(firstVal)+','+to_string(row_num));
-                insertLast(row_index, to_string(size));
-            }
-            
-        }
-       /*
-        Node* nn = row_index;
-        int* y = rowStringParser(nn->data);
-        while(nn!=NULL){
-            y = rowStringParser(nn->data);
-            cout<<y[0]<<","<<y[1]<<"   ";
-            nn = nn->next;
-        }
-        cout<<endl;*/
-        /*
-        for(int i=0;i<size;i++){
-            cout<<val[i]<<"...";
-        }
-        cout<<endl;
-         */
-    }
-    
-    //Addition
-    SM add(SM other){
-        SM result(row,col);
-        if(row!=other.row or col!=other.col){
-            std::cout<<"Please check the matrix dimensions"<<std::endl;
-            return result;
+    int insert(int r, int c, double v, string op){
+        if(v==0){
+            cout<<"Input value 0 is ignored in the sparse matrix operation..."<<endl;
+            return 0;
         }
         
-        int *rowInfo1_1 = new int[2];
-        int *rowInfo1_2 = new int[2];
-        int *rowInfo2_1 = new int[2];
-        int *rowInfo2_2 = new int[2];
-       
-        Node *rowIndexer1 = row_index;
-        Node *rowIndexer2 = other.row_index;
-
-        
-        for(int i=0;i<row;i++){
-            if(rowIndexer1->next==NULL and rowIndexer2->next==NULL){
-                break;
-            }else if(rowIndexer1->next==NULL){
-                rowInfo2_1 = rowStringParser(rowIndexer2->data);
-                rowInfo2_2 = rowStringParser(rowIndexer2->next->data);
-                rowInfo1_1[0]=-1; rowInfo1_1[1]=-1;
-                rowInfo1_2[0]=-1; rowInfo1_2[1]=-1;
-            }else if(rowIndexer2->next==NULL){
-                rowInfo1_1 = rowStringParser(rowIndexer1->data);
-                rowInfo1_2 = rowStringParser(rowIndexer1->next->data);
-                rowInfo2_1[0]=-1; rowInfo2_1[1]=-1;
-                rowInfo2_2[0]=-1; rowInfo2_2[1]=-1;
-            }else{
-                rowInfo1_1 = rowStringParser(rowIndexer1->data);
-                rowInfo2_1 = rowStringParser(rowIndexer2->data);
-                rowInfo1_2 = rowStringParser(rowIndexer1->next->data);
-                rowInfo2_2 = rowStringParser(rowIndexer2->next->data);
-            }
-            double *r = new double[col];
+        //initial case
+        if(row_index.size()==0){
+            vector<int> row_info = vector<int>(2,0);
+            column_index.push_back(c);
+            val.push_back(v);
             
-            if(i==rowInfo1_1[1] and i==rowInfo2_1[1]){
-                int start1 = rowInfo1_1[0]; int start2 = rowInfo2_1[0];
-                int num_vals1 = rowInfo1_2[0]-rowInfo1_1[0]; int num_vals2 = rowInfo2_2[0] - rowInfo2_1[0];
-                for(int j=0;j<col;j++){
-                    if(j==column_index[start1] and j==other.column_index[start2] and num_vals1>0 and num_vals2>0){
-                        r[j] = val[start1] + other.val[start2];
-                        start1++; start2++;
-                        num_vals1--; num_vals2--;
-                    }else if(j==column_index[start1] and num_vals1>0){
-                        r[j] = val[start1];
-                        start1++; num_vals1--;
-                    }else if(j==other.column_index[start2] and num_vals2>0){
-                        r[j] = other.val[start2];
-                        start2++; num_vals2--;
-                    }else{
-                        r[j]=0.0;
-                    }
-                }
-                rowIndexer1 = rowIndexer1->next;
-                rowIndexer2 = rowIndexer2->next;
-                result.insert(r, i);
-            }else if(i==rowInfo1_1[1]){
-                int start1 = rowInfo1_1[0];
-                int num_vals1 = rowInfo1_2[0]-rowInfo1_1[0];
-                for(int j=0;j<col;j++){
-                    if(j==column_index[start1] and num_vals1>0){
-                        r[j] = val[start1];
-                        start1++;
-                        num_vals1--;
-                    }else{
-                        r[j]=0.0;
-                    }
-                }
-                rowIndexer1 = rowIndexer1->next;
-                result.insert(r, i);
-            }else if(i==rowInfo2_1[1]){
-                int start2 = rowInfo2_1[0];
-                int num_vals2 = rowInfo2_2[0]-rowInfo2_1[0];
-                for(int j=0;j<col;j++){
-                    if(j==other.column_index[start2] and num_vals2>0){
-                        r[j] = other.val[start2];
-                        start2++;
-                        num_vals2--;
-                    }else{
-                        r[j]=0.0;
-                    }
-                }
-                rowIndexer2 = rowIndexer2->next;
-                result.insert(r, i);
-            }else{
+            row_info.at(1) = r;
+            row_index.push_back(row_info);
+            
+            this->row = r+1;
+            this->col = c+1;
+            this->size++;
+            return 1;
+        }
+        
+        //rest
+        bool updated = false;
+        if(r>=this->row){this->row = r+1;}
+        if(c>=this->col){this->col = c+1;}
+        for(int i=0;i<this->row_index.size();i++){
+            vector<int> row_info = this->row_index.at(i);
+            //if updated in the previous loop, the remainder row_index[0] needs to be shifted by 1, and continue looping till the end
+            if(updated){
+                row_index.at(i).at(0) +=1;
                 continue;
             }
-            delete[] r;
+            
+            if(r==row_info[1]){//this row already exists, now working on col with insert and sort
+                int N;
+                if(i==(int)this->row_index.size()-1){
+                    N = (this->size) - row_info[0];
+                }else{
+                    N = (this->row_index.at(i+1).at(0)) - row_info[0];
+                }
+                for(int j=row_info[0];j<row_info[0]+N;j++){
+                    if(c==this->column_index[j]){
+                        
+                        if(op=="add"){
+                            //in case op = "add", it's a part of an addition operation
+                            this->val[j]+=v;
+                            return 1;
+                        }
+                        
+                        cout<<"An element already exists at the row "<<r<<" and column "<<c<<endl;
+                        cout<<"Insertion of "<<v<<" at ("<<r<<", "<<c<<") failed..."<<endl;
+                        return 0;
+                    }
+                }
+                //Inserting a new col value in the column_index vector at the 1st position of the corresponding row lump.
+                column_index.insert(column_index.begin()+row_info[0], c);
+                //sorting only the relevent row_lump within the column_index vector in ascending order
+                sort(column_index.begin()+row_info[0], column_index.begin()+row_info[0]+N+1);
+                
+                int idx = row_info[0];
+                for(int j=row_info[0];j<row_info[0]+N+1;j++){ //N+1 since a new element is added
+                    if(c == column_index[j]){
+                        idx = j;
+                    }
+                }
+
+                val.insert(val.begin()+idx, v);
+                updated = true;
+                
+            }else if(r<row_info[1]){//insert the new r
+                vector<int> ri = vector<int>(2,0);
+                int idx = row_info[0];
+
+                column_index.insert(column_index.begin()+idx,c);
+                val.insert(val.begin()+idx,v);
+                
+                ri[0] = idx;
+                ri[1] = r;
+                row_index.insert(row_index.begin()+i, ri);
+                updated = true;
+            }
+        }
+        if(!updated){
+            vector<int> ri = vector<int>(2,0);
+            column_index.push_back(c);
+            val.push_back(v);
+            
+            ri[0] = (int) column_index.size() - 1;
+            ri[1] = r;
+            row_index.push_back(ri);
+        }
+        this->size++;
+        return 1;
+    }
+    
+    SM add(SM other){
+        SM result;
+        int nRows_a, nRows_b;
+        nRows_a = (int)this->row_index.size();
+        nRows_b = (int)other.row_index.size();
+        
+        for(int i=0;i<nRows_a;i++){
+            int N;
+            if(i==nRows_a-1){
+                N = this->size - this->row_index.at(i)[0];
+                
+            }else{
+                N = this->row_index.at(i+1)[0] - this->row_index.at(i)[0];
+            }
+            for(int j=this->row_index.at(i)[0];j<this->row_index.at(i)[0]+N;j++){
+                int c = this->column_index[j];
+                double v = this->val[j];
+                result.insert(this->row_index.at(i)[1], c, v, "");
+            }
+        }
+        
+        for(int i=0;i<nRows_b;i++){
+            int N;
+            if(i==nRows_b-1){
+                N = other.size - other.row_index.at(i)[0];
+                
+            }else{
+                N = other.row_index.at(i+1)[0] - other.row_index.at(i)[0];
+            }
+            for(int j=other.row_index.at(i)[0];j<other.row_index.at(i)[0]+N;j++){
+                int c = other.column_index[j];
+                int v = other.val[j];
+                result.insert(other.row_index.at(i)[1], c, v, "add");
+            }
         }
 
-        delete[] rowInfo1_1;
-        delete[] rowInfo1_2;
-        delete[] rowInfo2_1;
-        delete[] rowInfo2_2;
-        rowIndexer1 = NULL;
-        rowIndexer2 = NULL;
-        delete rowIndexer1;
-        delete rowIndexer2;
+        return result;
+    }
+    
+    SM transpose(){
+        SM result;
+        for(int i=0;i<(int)this->row_index.size();i++){
+            vector<int> row_info = this->row_index.at(i);
+            int N;
+            if(i==(int)this->row_index.size()-1){
+                N = this->size - row_info[0];
+            }else{
+                N = this->row_index.at(i+1)[0] - row_info[0];
+            }
+            for(int j=row_info[0];j<row_info[0]+N;j++){
+                int c = this->column_index[j];
+                double v = this->val[j];
+                result.insert(c, row_info[1], v, "");
+            }
+        }
         
         return result;
     }
     
-    //Transpose
-    SM transpose(){
-        SM transposed(col,row);
-        //column_index (0 0 1 1 2 0 3 ...)
-        //row_index (0,0 1,1 4,3 ... 10)
-        int* rowInfo1 = new int[2];
-        int* rowInfo2 = new int[2];
-        
-        for(int i=0;i<col;i++){ //iteration of transposed's row
-            double *r = new double[row];
-            bool elemAdded = false;
-            for(int j=0;j<row;j++){//Initialize
-                r[j]=0.0;
-            }
-            for(int j=0;j<size;j++){
-                if(i==column_index[j]){
-                    Node* rowIndexer = row_index;
-                    while(rowIndexer->next!=NULL){
-                        rowInfo1 = rowStringParser(rowIndexer->data);
-                        rowInfo2 = rowStringParser(rowIndexer->next->data);
+    SM product(SM other){
+        SM result;
+        other = other.transpose();
 
-                        if(j>=rowInfo1[0] and j<rowInfo2[0]){
-                            r[rowInfo1[1]] = val[j];
-                            elemAdded = true;
-                        }
-                        
-                        
-                        rowIndexer = rowIndexer->next;
-                    }
-                    rowIndexer = NULL;
-                    delete rowIndexer;
-                }
-            }
-            if(elemAdded){
-                transposed.insert(r, i);
-            }
-            delete[] r;
-        }
-
-        delete[] rowInfo1;
-        delete[] rowInfo2;
-        
-        return transposed;
-    }
-    
-    //Multiplication
-    SM multiply(SM other){
-        //other = other.transpose();
-        SM result(row,other.col);
-        if(col!=other.row){
-            std::cout<<"Please check the matrix dimensions -- MxN * NxA is possible operation"<<std::endl;
+        //check for validity of dimensions for further operation
+        if(this->col!=other.row){
+            cout<<"The first matrix's column dimension and the second's row dimension have to be identical for a product operation"<<endl;
+            cout<<"Product operation failed"<<endl;
             return result;
         }
-        Node* rowIndexer1 = row_index;
-        while(rowIndexer1->next!=NULL){
-            double *r = new double[other.col];
-            int *rowInfo1_1 = new int[2];
-            int *rowInfo1_2 = new int[2];
-            rowInfo1_1 = rowStringParser(rowIndexer1->data);
-            rowInfo1_2 = rowStringParser(rowIndexer1->next->data);
-            int currRow = rowInfo1_1[1];int start1 = rowInfo1_1[0];int numVals1 = rowInfo1_2[0] - rowInfo1_1[0];
-            for(int i=0;i<other.col;i++){
-                double sum=0.0;
-                for(int j=start1;j<start1+numVals1;j++){
-                    Node* rowIndexer2 = other.row_index;
-                    while(rowIndexer2->next!=NULL){
-                        auto rowInfo2_1 = rowStringParser(rowIndexer2->data);
-                        auto rowInfo2_2 = rowStringParser(rowIndexer2->next->data);
-                        int start2 = rowInfo2_1[0];
-                        int numVals2 = rowInfo2_2[0] - rowInfo2_1[0];
-                        if(rowInfo2_1[1]==column_index[j]){
-                            for(int k=start2;k<start2+numVals2;k++){
-                                if(other.column_index[k]==i){
-                                    sum+=val[j]*other.val[k];
-                                }
-                            }
-                        }
-                        rowIndexer2 = rowIndexer2->next;
-                    }
-                    rowIndexer2=NULL;
-                    delete rowIndexer2;
-                }
-                r[i]=sum;
+        
+        for(int i_a=0;i_a<(int)this->row_index.size();i_a++){
+            vector<int> row_info_a = this->row_index.at(i_a);
+            int N_a;
+            if(i_a == (int)this->row_index.size()-1){
+                N_a = this->size - row_info_a[0];
+            }else{
+                N_a = this->row_index.at(i_a+1)[0] - row_info_a[0];
             }
-            result.insert(r,currRow);
-            rowIndexer1 = rowIndexer1->next;
-            delete[] rowInfo1_1;
-            delete[] rowInfo1_2;
-            delete[] r;
+            for(int j_a=row_info_a[0];j_a<row_info_a[0]+N_a;j_a++){
+                int col_a = this->column_index[j_a];
+                double val_a = this->val[j_a];
+                
+                for(int i_b=0;i_b<(int)other.row_index.size();i_b++){
+                    vector<int> row_info_b = other.row_index.at(i_b);
+                    if(col_a==row_info_b[1]){
+                        int N_b;
+                        if(i_b == (int)other.row_index.size()-1){
+                            N_b = other.size - row_info_b[0];
+                        }else{
+                            N_b = other.row_index.at(i_b+1)[0] - row_info_b[0];
+                        }
+                        for(int j_b=row_info_b[0];j_b<row_info_b[0]+N_b;j_b++){
+                            int col_b = other.column_index[j_b];
+                            double val_b = other.val[j_b];
+                            result.insert(row_info_a[1], col_b, val_a*val_b, "add");
+                        }
+                    }else{
+                        continue;
+                    }
+                }
+            }
         }
-        rowIndexer1=NULL;
-        delete rowIndexer1;
+        
         return result;
     }
     
     
-    //print Dense Matrix
-    void printDense(){
-        Node *indexer = row_index;
-        if(indexer==NULL){
-            for(int i=0;i<row;i++){
-                for(int j=0;j<col;j++){
-                    cout<<0<<"     ";
-                }
-                cout<<endl;
-            }
-            return;
-        }
-
-        bool firstRow = true;
-        bool lastRow = false;
-        int currRow=0;
-        while(indexer->next!=NULL){
-            if(indexer->next->next==NULL){
-                lastRow = true;
-            }
-            int* rowInfo1 = rowStringParser(indexer->data);
-            int* rowInfo2 = rowStringParser(indexer->next->data);
-            currRow = rowInfo1[1]; int start = rowInfo1[0]; int numVals = rowInfo2[0] - rowInfo1[0];
-            if(firstRow){
-                for(int i=0;i<currRow;i++){
-                    for(int j=0;j<col;j++){
-                        cout<<0<<"     ";
-                    }
-                    cout<<endl;
-                }
-                firstRow=false;
-            }
-            if(lastRow){
-                for(int j=0;j<col;j++){
-                    if(j==column_index[start] and numVals>0){
-                        cout<<val[start]<<"     ";
-                        start++; numVals--;
-                    }else{
-                        cout<<0<<"     ";
-                    }
-                }
-                cout<<endl;
+    void printSparse(){
+        cout<<"Sparse matrix: "<<endl;
+        for(int i=0;i<this->row_index.size();i++){
+            int N;
+            vector<int> row_info = row_index.at(i);
+            if(i==(int)this->row_index.size()-1){
+                N = (this->size) - row_info[0];
             }else{
-                for(int i=currRow;i<rowInfo2[1];i++){
-                    for(int j=0;j<col;j++){
-                        if(j==column_index[start] and numVals>0){
-                            cout<<val[start]<<"     ";
-                            start++; numVals--;
-                        }else{
-                            cout<<0<<"     ";
-                        }
+                N = this->row_index.at(i+1)[0] - row_info[0];
+            }
+            std::cout << std::fixed;
+            std::cout << std::setprecision(1);
+            std::cout<<setw(7);
+            for(int j=0;j<this->col;j++){
+                bool mark_col = false;
+                int idx = 0;
+                for(int k=row_info[0];k<row_info[0]+N;k++){
+                    if(j==this->column_index[k]){
+                        idx = k;
+                        mark_col = true;
+                        break;
                     }
-                    cout<<endl;
+                }
+                
+                if(mark_col){
+                    cout<<this->val[idx]<<setw(7);;
+                }else{
+                    cout<<"0.0"<<setw(7);
+                }
+            }
+
+            cout<<endl;
+        }
+    }
+    
+    void printDense(){
+        cout<<"Dense matrix: "<<endl;
+        std::cout << std::fixed;
+        std::cout << std::setprecision(1);
+        std::cout<<setw(7);
+        for(int i=0;i<this->row;i++){
+            bool mark_row = false;
+            int row_idx = 0;
+            for(int r=0;r<this->row_index.size();r++){
+                if(i==this->row_index.at(r).at(1)){
+                    mark_row = true;
+                    row_idx = r;
+                    break;
                 }
             }
             
-            indexer = indexer->next;
-        }
-        if(currRow<row-1){
-            for(int i=currRow;i<row-1;i++){
-                for(int j=0;j<col;j++){
-                    cout<<0<<"     ";
-                }
-                cout<<endl;
-            }
-        }
-        indexer=NULL;
-        delete indexer;
-        
-
-    }
-    
-    //print Sparse Matrix
-    void printSparse(){
-        Node* indexer = row_index;
-        if(indexer==NULL){
-            return;
-        }
-        
-        while(indexer->next!=NULL){
-            int* rowInfo1 = rowStringParser(indexer->data);
-            int* rowInfo2 = rowStringParser(indexer->next->data);
-            int start = rowInfo1[0]; int numVals = rowInfo2[0] - rowInfo1[0];
-            for(int j=0;j<col;j++){
-                if(j==column_index[start] and numVals>0){
-                    cout<<val[start]<<"     ";
-                    start++; numVals--;
+            if(mark_row){
+                int N;
+                vector<int> row_info = row_index.at(row_idx);
+                if(row_info==row_index.back()){
+                    N = (this->size) - row_info[0];
                 }else{
-                    cout<<0<<"     ";
+                    N = this->row_index.at(row_idx+1)[0] - row_info[0];
+                }
+                for(int j=0;j<this->col;j++){
+                    bool mark_col = false;
+                    int idx = 0;
+                    for(int k=row_info[0];k<row_info[0]+N;k++){
+                        if(j==this->column_index[k]){
+                            idx = k;
+                            mark_col = true;
+                            break;
+                        }
+                    }
+                    
+                    if(mark_col){
+                        cout<<this->val[idx]<<setw(7);;
+                    }else{
+                        cout<<"0.0"<<setw(7);
+                    }
+                }
+                
+            }else{
+                for(int j=0;j<this->col;j++){
+                    cout<<"0.0"<<setw(7);
                 }
             }
             cout<<endl;
-            indexer = indexer->next;
         }
-        indexer=NULL;
-        delete indexer;
     }
+        
+      
     
 };
 
 int main(int argc, const char * argv[]) {
     
-    double row0[5] = {1.1,0.0,0.0,0.0,0.0};
-    double row1[5] = {0.0,8.0,3.0,0.0,0.0};
-    double row2[5] = {0.0,0.0,0.0,0.0,0.0};
-    double row3[5] = {0.0,4.2,9.7,0.0,0.0};
-    double row4[5] = {6.0,0.0,7.2,8.1,0.0};
-    SM s(5,5);
-    s.insert(row0,0);
-    s.insert(row1,1);
-    s.insert(row2,2);
-    s.insert(row3,3);
-    s.insert(row4,4);
-    cout<<"s1 (Dense): "<<endl;
-    s.printDense();
-    cout<<endl;
-    cout<<"s1 (Sparse): "<<endl;
-    s.printSparse();
-    cout<<endl;
-    cout<<endl;
-    double r0[5] = {0.0,0.0,2.1,0.0,0.0};
-    double r1[5] = {0.0,8.0,0.0,2.5,0.0};
-    //double r2[5] = {0.0,4.2,0.0,1.1,0.0};
-    double r4[5] = {6.0,0.0,7.2,8.1,0.0};
-    SM s2(5,5);
-    s2.insert(r0,0);
-    s2.insert(r1,1);
-    //s2.insert(r2,2);
-    s2.insert(r4,4);
-    cout<<"s2 (Dense): "<<endl;
-    s2.printDense();
-    cout<<endl;
-    cout<<"s2 (Sparse): "<<endl;
-    s2.printSparse();
-      
-    cout<<endl;
-    cout<<endl;
-   
-    SM a(5,5);
-    a = s.add(s2);
-    cout<<"Addition(Dense): "<<endl;
-    a.printDense();
-    cout<<endl;
-    cout<<"Addition(Sparse): "<<endl;
-    a.printSparse();
-   
-  SM t(5,5);
-    t = s.transpose();
-    cout<<"Transposed s1(Dense): "<<endl;
-    t.printDense();
-    cout<<endl;
-    cout<<"Transposed s1(Sparse): "<<endl;
-    t.printSparse();
-    cout<<endl;
-    ///
-   
-    cout<<"s1 (Dense): "<<endl;
-    s.printDense();
-    cout<<endl;
-    ///
-   
-    t = s2.transpose();
-    cout<<"Transposed s2(Dense): "<<endl;
-    t.printDense();
-    cout<<endl;
-    cout<<"Transposed s2(Sparse): "<<endl;
-    t.printSparse();
-    cout<<endl;
+    SM a1,a2,a3;
+    a1.insert(1,1,1,"");
+    a1.insert(1,3,2.5,"");
+    a1.insert(2,3,3.5,"");
+    cout<<"----a1------"<<endl;
+    a1.printSparse();
+    a1.printDense();
+
+    a2.insert(2,3,1.7,"");
+    a2.insert(1,3,1.1,"");
+    a2.insert(1,1,8,"");
+    a2.insert(0,1,3.1,"");
+    cout<<"----a2 transposed------"<<endl;
+    a2.transpose().printSparse();
+    a2.transpose().printDense();
     
-    SM m(5,5);
-    m = s.multiply(s2);
-    cout<<"Multiplication (Dense): "<<endl;
-    m.printDense();
-    cout<<endl;
-    cout<<"Multiplication (Sparse): "<<endl;
-    m.printSparse();
-    
- 
-    
-    
-    
-    SM w(7,7);
-    SM x(7,7);
-    SM y(7,7);
-    SM z(7,7);
-    double _r0[7] = {0,5.2,0,0,0,0,0};
-    double _r1[7] = {0,0,0,0,12.1,0,0};
-    double _r2[7] = {0,0,5.7,0,0,0,0};
-    double _r5[7] = {0,0,0,7.2,0,0,0};
-    double _r6[7] = {0,0,0,0,0,0,2.5};
-    w.insert(_r0,0);
-    w.insert(_r1,1);
-    w.insert(_r2,2);
-    w.insert(_r5,5);
-    w.insert(_r6,6);
-    
-    double r_1[7] = {2.1,0,0,0,0,0,0};
-    double r_2[7] = {0,0,9.4,0,0,0,0};
-    double r_3[7] = {2.2,0,0,0,0,8.3,0};
-    double r_6[7] = {0,0,0,0,0,0,7.0};
-    x.insert(r_1,1);
-    x.insert(r_2,2);
-    x.insert(r_3,3);
-    x.insert(r_6,6);
-    
-    cout<<"a (Dense): "<<endl;
-    w.printDense();
-    cout<<"a (Sparse): "<<endl;
-    w.printSparse();
-    cout<<"b (Dense): "<<endl;
-    x.printDense();
-    cout<<"b.T (Dense):"<<endl;
-    y = x.transpose();
-    y.printDense();
-    cout<<"a.T (Dense):"<<endl;
-    y=w.transpose();
-    y.printDense();
-    cout<<"a.T (Sparse):"<<endl;
-    y.printSparse();
-    
-    z = w.multiply(x);
-    cout<<"axb (Dense):"<<endl;
-    z.printDense();
-    cout<<"axb (Sparse):"<<endl;
-    z.printSparse();
+    cout<<"the product of a1 and a2 transposed"<<endl;
+    a3 = a1.product(a2);
+    a3.printSparse();
+    a3.printDense();
 
     return 0;
 }
-
