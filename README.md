@@ -18,7 +18,7 @@ e.g.)
 Given the sparse matrix above,
 column_index = [1, 3, 4, 0, 1]
 values = [1, 2, 3, 1, 4]
-row_index (vector of vector)= [[0,0], [3,1]]
+row_index (vector of vectors)= [[0,0], [3,1]]
 
 That is, column_index and values arrays(or vectors) record all the corresponding elements.
 However, the row_index records only a row's first (representative) element's index in the column_index/values array and its row.
