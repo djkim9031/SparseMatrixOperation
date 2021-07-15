@@ -23,7 +23,10 @@ row_index (vector of vector)= [[0,0], [3,1]]
 That is, column_index and values arrays(or vectors) record all the corresponding elements.
 However, the row_index records only a row's first (representative) element's index in the column_index/values array and its row.
 
-It is of the form '''vector<vector<int>>(vector<int>(2,corresponding vals),number_of_unique_rows)'''. 
+It is of the form 
+'''
+vector<vector<int>>(vector<int>(2,corresponding vals),number_of_unique_rows)
+''' 
 By doing this, we don't need to record every element's row, column, and value metrics. This further saves memory.
 
 Major update has been made since the last upload
