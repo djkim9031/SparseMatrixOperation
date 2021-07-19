@@ -2,11 +2,11 @@
 #include <iostream>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
+#include <time.h>
 
 using namespace std;
 
 class SM{
-public:
     
     //insertion and sort helper functions
     template<typename T>
@@ -126,7 +126,7 @@ public:
             column_index.push_back(c);
             val.push_back(v);
             rows.push_back(r);
-            row_index.push_back(this->size-1);
+            row_index.push_back(this->size);
         }
 
         this->size++;
@@ -278,6 +278,7 @@ int main()
   a1.insert(3,0,1);
   a1.insert(0,0,7);
   a1.insert(1,0,3);
+  a1.insert(9,9,3);
   cout<<"----a1------"<<endl;
   a1.printSparse();
   a1.printDense();
@@ -342,10 +343,14 @@ int main()
   //____________________________________________
   dim3 threadsPerBlock(a1.row, a1.col);
   dim3 numBlocks((a1.row + threadsPerBlock.x -1) / threadsPerBlock.x, (a2.col +threadsPerBlock.y -1) / threadsPerBlock.y);
+  clock_t t;
+  t = clock();
   
   vec_product<<<numBlocks, threadsPerBlock>>>(a1.rows.size(), a2.rows.size(),val_a_d,val_b_d,row_index_a_d,rows_a_d,row_index_b_d,rows_b_d,column_index_a_d,column_index_b_d,a1,a2,result_d);
   
   cudaDeviceSynchronize();
+  t = clock() - t;
+  double time_taken = ((double)t)/CLOCKS_PER_SEC;
   cudaMemcpy(result, result_d, sizeof(double)*a1.row*a2.col, cudaMemcpyDeviceToHost);
   printf("Product of a1 and a2 calculated!\n");
   
@@ -355,6 +360,7 @@ int main()
       }
       cout<<endl;
   }
+  cout<<"Product calculation execution time: "<<time_taken<<endl;
   
   cudaFree(val_a_d);
   cudaFree(val_b_d);
