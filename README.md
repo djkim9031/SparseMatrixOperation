@@ -30,3 +30,10 @@ vector<vector<int>>(vector<int>(2,corresponding vals),number_of_unique_rows)
 By doing this, we don't need to record every element's row, column, and value metrics. This further saves memory.
 
 Major update has been made since the last upload
+
+
+
+# SparseMatrixOperation on CUDA
+This is for my personal learning purpose. Essnetially the same logic on C++ is implemented using CUDA C extension. Vectors on host is implemented using thrust::host_vector. 
+
+Initially, I thought vectors could be copied to device using thrust::device_vector. However, this is not the case as thrust::device_vector is also callable only on host. Hence, even though it is not optimal, host_vectors are copied to arrays on host, which are then copied to device using the pointers.
